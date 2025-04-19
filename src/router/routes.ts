@@ -2,17 +2,32 @@ import type { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/',
-    component: () => import('layouts/MainLayout.vue'),
-    children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
+    path: '/:locale([\\w]{2,3})/',
+    component: () => import('layouts/LocalizationWrapper.vue'),
+    children: [
+      {
+        path: '',
+        component: () => import('layouts/MainLayout.vue'),
+        children: [
+          {
+            path: '',
+            component: () => import('pages/IndexPage.vue')
+          }
+        ]
+      }
+    ]
   },
-
-  // Always leave this as last one,
-  // but you can also remove it
+  {
+    name: '404',
+    path: '/:locale([\\w]{2,3})/:pathMatch(.*)',
+    component: () => import('pages/ErrorNotFound.vue')
+  },
   {
     path: '/:catchAll(.*)*',
-    component: () => import('pages/ErrorNotFound.vue'),
-  },
+    redirect: to => {
+      return '/en' + to.fullPath;
+    }
+  }
 ];
 
 export default routes;
