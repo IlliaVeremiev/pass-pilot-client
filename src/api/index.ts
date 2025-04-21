@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { Organization } from 'src/models/organization'
-import { UserLogin } from 'src/composables/use-auth'
+import { ExternalAuthRequest, UserLogin } from 'src/composables/use-auth'
 import { CreateUserForm } from 'src/dto/user'
 import { User } from 'src/models/user'
 
@@ -37,6 +37,10 @@ export default {
   },
   async login(credentials: UserLogin): Promise<{ token: string }> {
     const response = await api.post<{ token: string }>('/login', credentials)
+    return response.data
+  },
+  async externalLogin(authRequest: ExternalAuthRequest): Promise<{ token: string }> {
+    const response = await api.post('/sso/verify', authRequest)
     return response.data
   }
 }
