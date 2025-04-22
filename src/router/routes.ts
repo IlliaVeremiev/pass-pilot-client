@@ -18,11 +18,22 @@ const routes: RouteRecordRaw[] = [
             name: 'auth',
             path: 'authentication',
             component: () => import('pages/AuthenticationPage.vue')
-          },
+          }
+        ]
+      },
+      {
+        path: ':organizationId',
+        component: () => import('layouts/OrganizationLayout.vue'),
+        children: [
           {
             name: 'organization',
-            path: ':slug',
+            path: '',
             component: () => import('pages/OrganizationPage.vue')
+          },
+          {
+            name: 'payment',
+            path: ':planId',
+            component: () => import('pages/CheckoutPage.vue')
           }
         ]
       }

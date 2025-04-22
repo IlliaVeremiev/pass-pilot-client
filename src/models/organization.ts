@@ -1,3 +1,5 @@
+import currency from 'currency.js'
+
 export interface Organization {
   id: string;
   name: string;
@@ -11,5 +13,5 @@ export interface Plan {
   name: string;
   description: string;
   duration: number;
-  price: string;
+  price: currency;
 }

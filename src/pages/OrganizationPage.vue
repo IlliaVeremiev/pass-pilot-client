@@ -4,7 +4,9 @@
     <q-card-section v-if="organization">
       <q-btn
         v-if="hasPlansTab"
-        :disable="!organization"
+        @click="selectPlan"
+        :disable="tab === 'plans'"
+        :outline="tab === 'plans'"
         label="Select plan"
         class="full-width"
         color="primary"
@@ -17,7 +19,11 @@
       <q-skeleton height="3.5em" animation="fade" />
     </q-card-section>
 
-    <q-tabs v-if="organization" v-model="tab">
+    <q-tabs
+      v-if="organization"
+      :model-value="tab"
+      @update:model-value="setTab"
+    >
       <q-tab v-if="hasOverviewTab" label="Overview" name="overview" />
       <q-tab v-if="hasPlansTab" label="Plans" name="plans" />
     </q-tabs>
@@ -46,27 +52,42 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Organization } from 'src/models/organization'
-import { created } from 'src/utils/vue-utils'
-import api from 'src/api'
 import OrganizationBanner from 'components/organization/OrganizationBanner.vue'
 import OrganizationPlansPanel from 'components/organization/panels/OrganizationPlansPanel.vue'
+import { useAuth } from 'src/composables/use-auth'
+
+const props = defineProps<{
+  organization: Organization | null
+}>()
 
 const route = useRoute()
+const auth = useAuth()
+const router = useRouter()
 
-const slug = computed(() => <string>route.params.slug)
+const tab = ref<string>(<string | null>route.query.tab ?? 'overview')
 
-const organization = ref<Organization | null>(null)
-const tab = ref<string>('plans')
-
-const hasOverviewTab = computed(() => (organization.value?.description ?? null) !== null)
-const hasPlansTab = computed(() => organization.value?.plans.length ?? 0 > 0)
-
-created(async () => {
-  organization.value = await api.getOrganization(slug.value)
+watch(route, (newValue) => {
+  tab.value = <string>newValue.query.tab
 })
+
+function setTab(tab: string) {
+  router.push({ ...route, query: { ...route.query, tab: tab } })
+  console.log(tab, { ...route, query: { ...route.query, tab: tab } })
+}
+
+const hasOverviewTab = computed(() => (props.organization?.description ?? null) !== null)
+const hasPlansTab = computed(() => props.organization?.plans.length ?? 0 > 0)
+
+function selectPlan() {
+  if (auth.isAuthenticated.value) {
+    setTab('plans')
+  } else {
+    router.push({ name: 'auth', query: { redirect: btoa(route.fullPath) } })
+  }
+}
 
 </script>
 <style scoped>

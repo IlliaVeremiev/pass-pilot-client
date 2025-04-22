@@ -25,8 +25,20 @@ export const useLoading = () => {
     hide: () => q.loading.hide('registration')
   }
 
+  const payment = {
+    show: () => show('payment', 'Redirecting to payment page...'),
+    hide: () => q.loading.hide('payment')
+  }
+
+  const loading = {
+    show: () => show('loading', 'Loading...'),
+    hide: () => q.loading.hide('loading')
+  }
+
   return {
     signIn,
-    registerUser
+    registerUser,
+    payment,
+    loading
   }
 }

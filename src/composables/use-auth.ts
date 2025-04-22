@@ -1,8 +1,9 @@
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from 'src/api'
 import { useLoading } from 'src/composables/use-loading'
 import { useAuthStore } from 'stores/auth-store'
+import axios from 'axios'
 import CredentialResponse = google.accounts.id.CredentialResponse
 import PromptMomentNotification = google.accounts.id.PromptMomentNotification
 
@@ -19,6 +20,7 @@ export interface ExternalAuthRequest {
 const accessToken = 'accessToken'
 
 export const useAuth = () => {
+  const route = useRoute()
   const router = useRouter()
   const loading = useLoading()
   const authStore = useAuthStore()
@@ -27,27 +29,30 @@ export const useAuth = () => {
     get: () => localStorage.getItem(accessToken),
     set: (newToken) => newToken !== null ? localStorage.setItem(accessToken, newToken) : localStorage.removeItem(accessToken)
   })
-  const isAuthenticated = computed(() => authStore.user !== null)
+  const isAuthenticated = computed(() => authStore.authenticated)
   const user = computed(() => authStore.user)
 
   async function login(credentials: UserLogin) {
     const response = await api.login(credentials)
     token.value = response.token
     await loadUser()
-    await router.push({ name: 'home' })
+    await redirectOrHome()
   }
 
   async function logout() {
     authStore.setUser(null)
     token.value = null
-    await router.push({ name: 'home' })
+    await redirectOrHome()
   }
 
   async function loadUser() {
     try {
       authStore.setUser(await api.getAuthenticatedUser())
     } catch (error) {
-      token.value = null
+      authStore.setUser(null)
+      if (axios.isAxiosError(error) && error.status === 401) {
+        token.value = null
+      }
       throw error
     }
   }
@@ -78,9 +83,37 @@ export const useAuth = () => {
       const apiResponse = await api.externalLogin({ provider: 'google', idToken: response.credential })
       token.value = apiResponse.token
       await loadUser()
-      await router.push({ name: 'home' })
+      await redirectOrHome()
     } finally {
       loading.signIn.hide()
+    }
+  }
+
+  async function requireAuthentication() {
+    if (isAuthenticated.value === null) {
+      await new Promise<void>((resolve) => {
+        const unwatch = watch(isAuthenticated, (newValue) => {
+          unwatch()
+          resolve()
+        })
+      })
+    }
+    if (isAuthenticated.value === true) {
+      return
+    }
+    await router.push({ name: 'auth', query: { redirect: btoa(route.fullPath) } })
+  }
+
+  async function redirectOrHome() {
+    if (route.query.redirect === null) {
+      await router.push({ name: 'home' })
+    }
+    try {
+      await router.push(atob(<string>route.query.redirect))
+    } catch (e) {
+      await router.push({ name: 'home' })
+      console.error(e)
+      //TODO: error should be tracked
     }
   }
 
@@ -90,6 +123,7 @@ export const useAuth = () => {
     logout,
     loadUser,
     user,
-    initializeGoogleLogin
+    initializeGoogleLogin,
+    requireAuthentication
   }
 }
